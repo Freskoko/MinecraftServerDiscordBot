@@ -9,7 +9,7 @@ const Nation = require('./models/nation');
 })();
 
 const { Client, GatewayIntentBits } = require('discord.js');
-const { ChannelType } = require('discord.js');
+const { ChannelType, Colors } = require('discord.js');
 const { PermissionFlagsBits } = require("discord.js");
 
 
@@ -27,11 +27,10 @@ const client = new Client({
 
 client.on("ready", () => {
     console.log(`${client.user.tag} online!`);
-    const guild = client.guilds.cache.get(process.env.DISCORD_GUILD_ID
-        );
+    const guild = client.guilds.cache.get(process.env.DISCORD_GUILD_ID);
 });
-const guild = client.guilds.cache.get(process.env.DISCORD_GUILD_ID);
 
+//TODO ADD LEAVE NATION FUNCTION
 
 
 client.on("messageCreate", async (message) => {
@@ -81,6 +80,7 @@ client.on("messageCreate", async (message) => {
     if (target_nation) {
         // Fetch nation by name
         const nation = await Nation.findOne({ where: { name: target_nation } });
+        const guild = client.guilds.cache.get(process.env.DISCORD_GUILD_ID);
 
         if (nation) {
             const username = message.author.username;
@@ -98,7 +98,19 @@ client.on("messageCreate", async (message) => {
                     const updatedWarRequests = [...nation.war_requests, userNation.name];
                     await nation.update({ war_requests: updatedWarRequests });
 
+
                     message.reply(`WAR REQUEST SENT TO ${target_nation}`);
+
+                    const targetrole = guild.roles.cache.find((role) => role.name === target_nation);
+
+                    const textout = `${targetrole} you have been challenged by ${userNation.name}`;
+
+                    const channelA = message.guild.channels.cache.find((channel) => channel.name === 'announcements');
+
+
+                    channelA.send(textout);
+
+
                 } else {
                     message.reply(`You cannot challenge your own nation to a war.`);
                 }
@@ -174,9 +186,24 @@ client.on("messageCreate", async (message) => {
                         message.reply(`You are already a member of ${existingNation.name}. Please leave that nation before joining a new one.`);
                     } else {
                         // Add user to the nation's members
+
                         const updatedMembers = [...nation.members, username];
                         await nation.update({ members: updatedMembers });
-                        message.reply(`You have successfully joined ${name}.`);
+
+                        const guild = client.guilds.cache.get(process.env.DISCORD_GUILD_ID);
+
+                        const nationRole = guild.roles.cache.find(role => role.name === name); //name is given in the command
+                            console.log('Nation role:', nationRole); 
+
+                            //Check if role was found before adding it to the user
+                            if (nationRole) {
+                                await message.member.roles.add(nationRole);
+                                message.reply(`You have successfully joined ${name}.`);
+                            } else {
+                            console.error('Nation role not found');
+                            message.reply(`Nation role not found ${name}.`)
+                            }
+
                     }
                 } else {
                     message.reply(`Nation ${name} not found.`);
@@ -237,19 +264,33 @@ client.on("messageCreate", async (message) => {
                     message.reply(`Nation ${newNation.name} has been created.`);
     
                     // Create the role for the nation
-                    let nationRole = await message.guild.roles.create({ data: { name: name, mentionable: true } });
-                    console.log(`${nationRole.name} has been created.`);
+
+                    const guild = client.guilds.cache.get(process.env.DISCORD_GUILD_ID);
+                    console.log(`name : ${name}`)
+
+                    guild.roles.create({
+                        
+                        name: name,
+                        // color: getRandomColor(),
+                        color: Colors.Blue,
+                        mentionable: true,
+                        reason: `we needed a role for ${name}`,
+                      })
+                        .then(console.log)
+                        .catch(console.error);
+
+                    console.log(`${name} has been created.`);
 
                     // Create the text channel for the nation
                     let channelName = newNation.name;
                     console.log(name)
                     console.log(`Creating channel with name: ${channelName}`); // Log the channel name
                     
-                    const guild = client.guilds.cache.get(process.env.DISCORD_GUILD_ID);
+                    //ADD GUILDCATEGORY
 
-                    guild.channels.create({
-                        name: name,
-                        type: ChannelType.GuildText,
+                    const category = await guild.channels.create({
+                        name: `-${name}-`,
+                        type: ChannelType.GuildCategory,
                         permissionOverwrites: [
                            {
                              id: message.author.id,
@@ -258,7 +299,33 @@ client.on("messageCreate", async (message) => {
                         ],
                     })
 
-            }
+                    guild.channels.create({
+                        name: `${name} Text`,
+                        type: ChannelType.GuildText,
+                        parent: category,
+                        permissionOverwrites: [
+                        
+                           {
+                             id: message.author.id,
+                             deny: [PermissionFlagsBits.ViewChannel],
+                          },
+                        ],
+                    })
+
+                    guild.channels.create({
+                        name: `${name} Voice`,
+                        type: ChannelType.GuildVoice,
+                        parent:category,
+                        permissionOverwrites: [
+                           {
+                             id: message.author.id,
+                             deny: [PermissionFlagsBits.ViewChannel],
+                          },
+                        ],
+                    })
+                }
+
+
         } catch (error) {
             console.error("Error adding nation:", error);
             message.reply("An error occurred while trying to add the nation.");
@@ -266,7 +333,7 @@ client.on("messageCreate", async (message) => {
     } else {
         message.reply("Please specify the name of the new nation.");}
 
-        //TODO LEAVE NATION{}
+        
 }});
 
 client.login(process.env.DISCORD_BOT_TOKEN);
