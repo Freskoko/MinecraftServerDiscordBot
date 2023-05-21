@@ -8,6 +8,24 @@ const Nation = sequelize.define('Nation', {
     unique: true,
     allowNull: false
   },
+
+  deaths: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    defaultValue: 0
+  },
+
+  selfkills:{
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    defaultValue:0
+  },
+
+  kills: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    defaultValue: 0
+  },
   
   members: {
     type: DataTypes.TEXT,
@@ -19,7 +37,7 @@ const Nation = sequelize.define('Nation', {
     }
   },
 
-  
+
   war_requests: {
     type: DataTypes.TEXT,
     get() {
@@ -29,6 +47,20 @@ const Nation = sequelize.define('Nation', {
       this.setDataValue('war_requests', JSON.stringify(val));
     }
   },
+
+  current_wars: {
+    type: DataTypes.TEXT,
+    get() {
+      return this.getDataValue('current_wars') ? JSON.parse(this.getDataValue('current_wars')) : [];
+    },
+    set(val) {
+      this.setDataValue('current_wars', JSON.stringify(val));
+    }
+  },
+
+
+
+
 });
 
 module.exports = Nation;

@@ -29,9 +29,11 @@ const client = new Client({
 
 client.on("ready", () => {
     console.log(`${client.user.tag} online!`);
-    const guild = client.guilds.cache.get("1034452675070271509");
+    const guild = client.guilds.cache.get(process.env.DISCORD_GUILD_ID
+        );
 });
-const guild = client.guilds.cache.get("1034452675070271509");
+const guild = client.guilds.cache.get(process.env.DISCORD_GUILD_ID
+    );
 
 
 
@@ -67,8 +69,7 @@ client.on("messageCreate", async (message) => {
     }
 
     //NATION WAR
-//NATION WAR
-if (message.content.startsWith("!startwar")) {
+    if (message.content.startsWith("!startwar")) {
     const target_nation = message.content.split(" ")[1];
     console.log("----------");
     console.log(target_nation);
@@ -82,7 +83,9 @@ if (message.content.startsWith("!startwar")) {
             const username = message.author.username;
 
             // Find the user's nation
-            const userNation = await Nation.findOne({ where: { members: { [Sequelize.Op.contains]: [username] } } });
+            const userNation = await Nation.findOne({
+                where: Sequelize.literal(`members LIKE '%"${username}"%'`)
+              });
 
             if (userNation) {
                 if (userNation.name !== target_nation) {
@@ -122,16 +125,29 @@ if (message.content.startsWith("!startwar")) {
                 // Remove the challenging nation from the war_requests
                 const updatedWarRequests = userNation.war_requests.filter(n => n !== nation);
                 await userNation.update({ war_requests: updatedWarRequests });
+                
+                // Add the challenging nation to current wars FOR CURRENT NATION
+                const updatedWarCurrently = [...userNation.current_wars, nation];
+                await userNation.update({ current_wars: updatedWarCurrently });
+    
+                const challengeNation = awaitNation.findOne({ where: { name: nation } });
+
+                // Add the challenged nation to current wars FOR CHALLENGING NATION
+                const updatedWarCurrently2 = [...challengeNation.current_wars, userNation.name];
+                await challengeNation.update({ current_wars: updatedWarCurrently2 });
     
                 // Send a message to the Discord chat
                 message.reply(`You have accepted the war request from ${nation}. Let the battle begin!`);
             } else {
                 message.reply(`No war request found from ${nation} in your nation's war_requests.`);
             }
-        } else {message.reply(`${username} does not belong to any nation.`);}
+        } else {
+            message.reply(`${username} does not belong to any nation.`);
+        }
     }
 
-    //JOIN NATION FOR INDIVIDUALS
+    //JOIN NATION FOR INDIVIDUALS ---------------
+
     if (message.content.startsWith("!join_nation")) {
         const name = message.content.split(" ")[1];
         console.log("----------");
@@ -180,10 +196,10 @@ if (message.content.startsWith("!startwar")) {
             if (nations.length === 0) {
                 message.reply("There are currently no nations.");
             } else {
-                // Iterate through the nations and create a string with nation name and members
+                // Iterate through the nations and create a string with nation name, members, war requests, and current wars
                 let nationList = "";
                 for (const nation of nations) {
-                    nationList += `**${nation.name}**:\nMembers: ${nation.members.join(", ") || "No members"}\n\n`;
+                    nationList += `__**${nation.name}**__\n**Members:** ${nation.members.join(", ") || "No members"}\n**War Requests:** ${nation.war_requests.join(", ") || "No war requests"}\n**Current Wars:** ${nation.current_wars.join(", ") || "No current wars"}\n\n`;
                 }
     
                 // Send the nation list to the channel
@@ -202,6 +218,7 @@ if (message.content.startsWith("!startwar")) {
         console.log(name);
         console.log("----------");
     
+        //TODO
         // if (!message.member.hasPermission("ADMINISTRATOR")) return console.log('you do not have permissons for this command.')
     
         if (name) {
@@ -219,18 +236,13 @@ if (message.content.startsWith("!startwar")) {
                     // Create the role for the nation
                     let nationRole = await message.guild.roles.create({ data: { name: name, mentionable: true } });
                     console.log(`${nationRole.name} has been created.`);
-                    // Create the text channel for the nation
-
-                    //--------------------------------
 
                     // Create the text channel for the nation
                     let channelName = newNation.name;
-                    console.log("&&&&&&&&&&&&&&&&&&&&&&&&&&");
                     console.log(name)
-                    console.log("&&&&&&&&&&&&&&&&&&&&&&&&&&");
                     console.log(`Creating channel with name: ${channelName}`); // Log the channel name
                     
-                    const guild = client.guilds.cache.get("1034452675070271509");
+                    const guild = client.guilds.cache.get(process.env.DISCORD_GUILD_ID);
 
                     guild.channels.create({
                         name: name,
@@ -251,12 +263,10 @@ if (message.content.startsWith("!startwar")) {
             message.reply("An error occurred while trying to add the nation.");
         }
     } else {
-        message.reply("Please specify the name of the new nation.");
-    }
-    
-    
-        
+        message.reply("Please specify the name of the new nation.");}
+
         //TODO LEAVE NATION{}
 }});
 
 client.login(process.env.DISCORD_BOT_TOKEN);
+
