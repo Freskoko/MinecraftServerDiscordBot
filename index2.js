@@ -1,7 +1,6 @@
+require("dotenv").config();
 const fs = require('node:fs');
 const path = require('node:path');
-const { Client, Collection, Events, GatewayIntentBits } = require('discord.js');
-require("dotenv").config();
 const { Sequelize } = require('sequelize');
 const { sequelize } = require('./database');
 const Nation = require('./models/nation');
@@ -11,9 +10,10 @@ const Nation = require('./models/nation');
     await sequelize.sync(); // This will create the tables if they don't exist
 })();
 
-const { Client, GatewayIntentBits } = require('discord.js');
 const { ChannelType, Colors } = require('discord.js');
 const { PermissionFlagsBits } = require("discord.js");
+const { Client, Collection, Events, GatewayIntentBits } = require('discord.js');
+require("dotenv").config();
 
 const client = new Client({
     intents: [
@@ -44,9 +44,19 @@ for (const folder of commandFolders) {
 	}
 }
 
-client.once(Events.ClientReady, () => {
-	console.log('Ready!');
-});
+const eventsPath = path.join(__dirname, 'events');
+const eventFiles = fs.readdirSync(eventsPath).filter(file => file.endsWith('.js'));
+
+for (const file of eventFiles) {
+	const filePath = path.join(eventsPath, file);
+	const event = require(filePath);
+	if (event.once) {
+		client.once(event.name, (...args) => event.execute(...args));
+	} else {
+		client.on(event.name, (...args) => event.execute(...args));
+	}
+}
+
 
 client.on(Events.InteractionCreate, async interaction => {
 	if (!interaction.isChatInputCommand()) return;
@@ -67,4 +77,5 @@ client.on(Events.InteractionCreate, async interaction => {
 	}
 });
 
+// Log in to Discord with your client's token
 client.login(process.env.DISCORD_BOT_TOKEN);
