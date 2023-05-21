@@ -25,15 +25,12 @@ const client = new Client({
 });
 
 
-//const rest = new REST({ version: '9' }).setToken(process.env['DISCORD_BOT_TOKEN'])
-
 client.on("ready", () => {
     console.log(`${client.user.tag} online!`);
     const guild = client.guilds.cache.get(process.env.DISCORD_GUILD_ID
         );
 });
-const guild = client.guilds.cache.get(process.env.DISCORD_GUILD_ID
-    );
+const guild = client.guilds.cache.get(process.env.DISCORD_GUILD_ID);
 
 
 
@@ -41,6 +38,12 @@ client.on("messageCreate", async (message) => {
     if (message.author.bot) return
 
     console.log(message.content);
+
+    if (message.content.startsWith("!help")){
+
+        message.channel.send("Use !startwar <nation> to send a war request. \n !accept_war <nation> to accept a war request \n !join_nation <nation> to join a nation \n !listnations to see info about all nations")
+
+    }
 
     //PERSON ON PERSON WAR - USE NATION WAR INSTEAD
     if (message.content.startsWith("!warperson")) {
@@ -199,7 +202,7 @@ client.on("messageCreate", async (message) => {
                 // Iterate through the nations and create a string with nation name, members, war requests, and current wars
                 let nationList = "";
                 for (const nation of nations) {
-                    nationList += `__**${nation.name}**__\n**Members:** ${nation.members.join(", ") || "No members"}\n**War Requests:** ${nation.war_requests.join(", ") || "No war requests"}\n**Current Wars:** ${nation.current_wars.join(", ") || "No current wars"}\n\n`;
+                    nationList += `__**${nation.name}**__\n**Members:** ${nation.members.join(", ") || "No members"}\n**War Requests:** ${nation.war_requests.join(", ") || "No war requests"}\n**Current Wars:** ${nation.current_wars.join(", ") || "No current wars"}\n**Kills:** ${nation.kills || 0}\n**Deaths:** ${nation.deaths || 0}\n**Self Kills:** ${nation.selfkills || 0}\n\n`;
                 }
     
                 // Send the nation list to the channel
@@ -254,8 +257,6 @@ client.on("messageCreate", async (message) => {
                           },
                         ],
                     })
-
-                    //--------------------------------
 
             }
         } catch (error) {
